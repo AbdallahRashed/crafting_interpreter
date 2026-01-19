@@ -1,0 +1,26 @@
+# Compiled files
+*.o
+*.class
+*.pyc
+*.out
+a.out
+
+# Executables
+clox
+jlox
+
+# Build directories
+build/
+bin/
+out/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
