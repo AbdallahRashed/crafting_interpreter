@@ -1,0 +1,62 @@
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -g
+
+# Build directory
+BUILD_DIR = build
+
+# Object files
+SCANNER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/main.o
+PARSER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/parser_test.o
+
+# Target executables
+SCANNER_TARGET = $(BUILD_DIR)/scanner_test
+PARSER_TARGET = $(BUILD_DIR)/parser_test
+
+# Default target
+all: $(SCANNER_TARGET) $(PARSER_TARGET)
+
+# Create build directory
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Link object files to create executables
+$(SCANNER_TARGET): $(SCANNER_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $(SCANNER_TARGET) $(SCANNER_OBJS)
+
+$(PARSER_TARGET): $(PARSER_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $(PARSER_TARGET) $(PARSER_OBJS)
+
+# Compile TokenType.cpp
+$(BUILD_DIR)/TokenType.o: TokenType.cpp TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c TokenType.cpp -o $(BUILD_DIR)/TokenType.o
+
+# Compile Scanner.cpp
+$(BUILD_DIR)/Scanner.o: Scanner.cpp Scanner.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c Scanner.cpp -o $(BUILD_DIR)/Scanner.o
+
+# Compile main.cpp
+$(BUILD_DIR)/main.o: main.cpp Scanner.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c main.cpp -o $(BUILD_DIR)/main.o
+
+# Compile Parser.cpp
+$(BUILD_DIR)/Parser.o: Parser.cpp Parser.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c Parser.cpp -o $(BUILD_DIR)/Parser.o
+
+# Compile parser_test.cpp
+$(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c parser_test.cpp -o $(BUILD_DIR)/parser_test.o
+
+# Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR)
+
+# Run the programs
+run-scanner: $(SCANNER_TARGET)
+	$(SCANNER_TARGET)
+
+run-parser: $(PARSER_TARGET)
+	$(PARSER_TARGET)
+
+run: run-scanner run-parser
+
+.PHONY: all clean run run-scanner run-parser
