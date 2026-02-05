@@ -7,13 +7,15 @@ BUILD_DIR = build
 # Object files
 SCANNER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/main.o
 PARSER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/parser_test.o
+INTERPRETER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/interpreter_test.o
 
 # Target executables
 SCANNER_TARGET = $(BUILD_DIR)/scanner_test
 PARSER_TARGET = $(BUILD_DIR)/parser_test
+INTERPRETER_TARGET = $(BUILD_DIR)/interpreter_test
 
 # Default target
-all: $(SCANNER_TARGET) $(PARSER_TARGET)
+all: $(SCANNER_TARGET) $(PARSER_TARGET) $(INTERPRETER_TARGET)
 
 # Create build directory
 $(BUILD_DIR):
@@ -25,6 +27,9 @@ $(SCANNER_TARGET): $(SCANNER_OBJS) | $(BUILD_DIR)
 
 $(PARSER_TARGET): $(PARSER_OBJS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -o $(PARSER_TARGET) $(PARSER_OBJS)
+
+$(INTERPRETER_TARGET): $(INTERPRETER_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $(INTERPRETER_TARGET) $(INTERPRETER_OBJS)
 
 # Compile TokenType.cpp
 $(BUILD_DIR)/TokenType.o: TokenType.cpp TokenType.h | $(BUILD_DIR)
@@ -46,6 +51,14 @@ $(BUILD_DIR)/Parser.o: Parser.cpp Parser.h exp.h Token.h TokenType.h | $(BUILD_D
 $(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c parser_test.cpp -o $(BUILD_DIR)/parser_test.o
 
+# Compile Interpreter.cpp
+$(BUILD_DIR)/Interpreter.o: Interpreter.cpp Interpreter.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c Interpreter.cpp -o $(BUILD_DIR)/Interpreter.o
+
+# Compile interpreter_test.cpp
+$(BUILD_DIR)/interpreter_test.o: interpreter_test.cpp Interpreter.h Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c interpreter_test.cpp -o $(BUILD_DIR)/interpreter_test.o
+
 # Clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR)
@@ -57,6 +70,9 @@ run-scanner: $(SCANNER_TARGET)
 run-parser: $(PARSER_TARGET)
 	$(PARSER_TARGET)
 
-run: run-scanner run-parser
+run-interpreter: $(INTERPRETER_TARGET)
+	$(INTERPRETER_TARGET)
 
-.PHONY: all clean run run-scanner run-parser
+run: run-scanner run-parser run-interpreter
+
+.PHONY: all clean run run-scanner run-parser run-interpreter

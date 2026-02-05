@@ -27,6 +27,7 @@ std::shared_ptr<Expr> Parser::assignment() {
         std::shared_ptr<Expr> value = assignment();
 
         if (auto varExpr = std::dynamic_pointer_cast<Variable>(expr)) {
+            std::cout << "Parsed assignment to variable: " << varExpr->name.lexeme << std::endl;
             return std::make_shared<Assign>(varExpr->name, value);
         } else if (auto getExpr = std::dynamic_pointer_cast<Get>(expr)) {
             return std::make_shared<Set>(getExpr->object, getExpr->name, value);
@@ -99,6 +100,7 @@ std::shared_ptr<Expr> Parser::term() {
         Token op = previous();
         std::shared_ptr<Expr> right = factor();
         expr = std::make_shared<Binary>(expr, op, right);
+        std::cout << "Parsed binary expression: " << tokenTypeToString(op.type) << std::endl;       
     }
 
     return expr;
