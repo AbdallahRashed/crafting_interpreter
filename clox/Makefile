@@ -8,14 +8,16 @@ BUILD_DIR = build
 SCANNER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/main.o
 PARSER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/parser_test.o
 INTERPRETER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/interpreter_test.o
+STATEMENT_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/statement_test.o
 
 # Target executables
 SCANNER_TARGET = $(BUILD_DIR)/scanner_test
 PARSER_TARGET = $(BUILD_DIR)/parser_test
 INTERPRETER_TARGET = $(BUILD_DIR)/interpreter_test
+STATEMENT_TARGET = $(BUILD_DIR)/statement_test
 
 # Default target
-all: $(SCANNER_TARGET) $(PARSER_TARGET) $(INTERPRETER_TARGET)
+all: $(SCANNER_TARGET) $(PARSER_TARGET) $(INTERPRETER_TARGET) $(STATEMENT_TARGET)
 
 # Create build directory
 $(BUILD_DIR):
@@ -30,6 +32,9 @@ $(PARSER_TARGET): $(PARSER_OBJS) | $(BUILD_DIR)
 
 $(INTERPRETER_TARGET): $(INTERPRETER_OBJS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -o $(INTERPRETER_TARGET) $(INTERPRETER_OBJS)
+
+$(STATEMENT_TARGET): $(STATEMENT_OBJS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -o $(STATEMENT_TARGET) $(STATEMENT_OBJS)
 
 # Compile TokenType.cpp
 $(BUILD_DIR)/TokenType.o: TokenType.cpp TokenType.h | $(BUILD_DIR)
@@ -52,12 +57,16 @@ $(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Stmt.h Scanner.h exp.h Toke
 	$(CXX) $(CXXFLAGS) -c parser_test.cpp -o $(BUILD_DIR)/parser_test.o
 
 # Compile Interpreter.cpp
-$(BUILD_DIR)/Interpreter.o: Interpreter.cpp Interpreter.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+$(BUILD_DIR)/Interpreter.o: Interpreter.cpp Interpreter.h Environment.h Stmt.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c Interpreter.cpp -o $(BUILD_DIR)/Interpreter.o
 
 # Compile interpreter_test.cpp
 $(BUILD_DIR)/interpreter_test.o: interpreter_test.cpp Interpreter.h Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c interpreter_test.cpp -o $(BUILD_DIR)/interpreter_test.o
+
+# Compile statement_test.cpp
+$(BUILD_DIR)/statement_test.o: statement_test.cpp Interpreter.h Environment.h Stmt.h Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c statement_test.cpp -o $(BUILD_DIR)/statement_test.o
 
 # Clean build artifacts
 clean:
@@ -73,6 +82,9 @@ run-parser: $(PARSER_TARGET)
 run-interpreter: $(INTERPRETER_TARGET)
 	$(INTERPRETER_TARGET)
 
-run: run-scanner run-parser run-interpreter
+run-statement: $(STATEMENT_TARGET)
+	$(STATEMENT_TARGET)
 
-.PHONY: all clean run run-scanner run-parser run-interpreter
+run: run-scanner run-parser run-interpreter run-statement
+
+.PHONY: all clean run run-scanner run-parser run-interpreter run-statement

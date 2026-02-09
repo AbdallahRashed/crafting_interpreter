@@ -6,8 +6,9 @@
 #include <typeinfo>
 #include <iostream>
 
+// ==================== EXPRESSION VISITORS ====================
+
 std::any Interpreter::visitLiteralExpr(Literal* expr) {
-    std::cout << "Evaluating literal: " << stringify(expr->value) << std::endl;
     return expr->value;    
 }
 
@@ -33,8 +34,7 @@ std::any Interpreter::visitUnaryExpr(Unary* expr) {
 std::any Interpreter::visitBinaryExpr(Binary* expr) {
     std::any left = evaluate(expr->left.get());
     std::any right = evaluate(expr->right.get());
-    std::cout << "Evaluating binary expression: " << tokenTypeToString(expr->op.type) << std::endl;
-    std::cout<< "Left operand: " << stringify(left) << ", Right operand: " << stringify(right) << std::endl;
+    
     switch (expr->op.type) {
         case PLUS:
             if (left.type() == typeid(double) && right.type() == typeid(double)) {
@@ -78,9 +78,12 @@ std::any Interpreter::visitBinaryExpr(Binary* expr) {
     return nullptr;
 }
 
-// Stub implementations for remaining visitor methods
+// ==================== EXPRESSION VISITORS (Updated) ====================
+
 std::any Interpreter::visitAssignExpr(Assign* expr) {
-    throw std::runtime_error("Assign not yet implemented.");
+    std::any value = evaluate(expr->value.get());
+    environment->assign(expr->name, value);
+    return value;
 }
 
 std::any Interpreter::visitCallExpr(Call* expr) {
@@ -92,7 +95,16 @@ std::any Interpreter::visitGetExpr(Get* expr) {
 }
 
 std::any Interpreter::visitLogicalExpr(Logical* expr) {
-    throw std::runtime_error("Logical not yet implemented.");
+    std::any left = evaluate(expr->left.get());
+    
+    // Short-circuit evaluation
+    if (expr->op.type == OR) {
+        if (isTruthy(left)) return left;
+    } else { // AND
+        if (!isTruthy(left)) return left;
+    }
+    
+    return evaluate(expr->right.get());
 }
 
 std::any Interpreter::visitSetExpr(Set* expr) {
@@ -108,10 +120,80 @@ std::any Interpreter::visitThisExpr(This* expr) {
 }
 
 std::any Interpreter::visitVariableExpr(Variable* expr) {
-    throw std::runtime_error("Variable not yet implemented.");
+    return environment->get(expr->name);
 }
 
-// Public interface
+// ==================== STATEMENT VISITORS ====================
+
+std::any Interpreter::visitExpressionStmt(Expression* stmt) {
+    evaluate(stmt->expression.get());
+    return std::any();  // No return value
+}
+
+std::any Interpreter::visitPrintStmt(Print* stmt) {
+    std::any value = evaluate(stmt->expression.get());
+    std::cout << stringify(value) << std::endl;
+    return std::any();
+}
+
+std::any Interpreter::visitVarStmt(Var* stmt) {
+    std::any value;
+    if (stmt->initializer != nullptr) {
+        value = evaluate(stmt->initializer.get());
+    }
+    // If no initializer, value is default-constructed std::any (empty = nil)
+    
+    environment->define(stmt->name.lexeme, value);
+    return std::any();
+}
+
+std::any Interpreter::visitBlockStmt(Block* stmt) {
+    executeBlock(stmt->statements, std::make_shared<Environment>(environment));
+    return std::any();
+}
+
+std::any Interpreter::visitIfStmt(If* stmt) {
+    if (isTruthy(evaluate(stmt->condition.get()))) {
+        execute(stmt->thenBranch.get());
+    } else if (stmt->elseBranch != nullptr) {
+        execute(stmt->elseBranch.get());
+    }
+    return std::any();
+}
+
+std::any Interpreter::visitWhileStmt(While* stmt) {
+    while (isTruthy(evaluate(stmt->condition.get()))) {
+        execute(stmt->body.get());
+    }
+    return std::any();
+}
+
+std::any Interpreter::visitFunctionStmt(Function* stmt) {
+    throw std::runtime_error("Function not yet implemented.");
+}
+
+std::any Interpreter::visitReturnStmt(Return* stmt) {
+    throw std::runtime_error("Return not yet implemented.");
+}
+
+std::any Interpreter::visitClassStmt(Class* stmt) {
+    throw std::runtime_error("Class not yet implemented.");
+}
+
+// ==================== PUBLIC INTERFACE ====================
+
+// NEW: Interpret a list of statements (main entry point)
+void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements) {
+    try {
+        for (const auto& statement : statements) {
+            execute(statement.get());
+        }
+    } catch (const RuntimeError& error) {
+        std::cerr << "[line " << error.token.line << "] Runtime error: " << error.what() << std::endl;
+    }
+}
+
+// LEGACY: Interpret single expression (for existing tests)
 std::any Interpreter::interpret(Expr* expr) {
     try {
         return evaluate(expr);
@@ -143,9 +225,37 @@ std::string Interpreter::stringify(const std::any& value) {
     return "unknown";
 }
 
-// Private helper methods
+// ==================== PRIVATE HELPER METHODS ====================
+
 std::any Interpreter::evaluate(Expr* expr) {
     return expr->accept(*this); 
+}
+
+void Interpreter::execute(Stmt* stmt) {
+    stmt->accept(*this);
+}
+
+void Interpreter::executeBlock(const std::vector<std::shared_ptr<Stmt>>& statements,
+                                std::shared_ptr<Environment> env) {
+    // Save current environment
+    std::shared_ptr<Environment> previous = environment;
+    
+    try {
+        // Switch to new environment
+        environment = env;
+        
+        // Execute all statements in the block
+        for (const auto& statement : statements) {
+            execute(statement.get());
+        }
+        
+        // Restore previous environment
+        environment = previous;
+    } catch (...) {
+        // Ensure environment is restored even on error
+        environment = previous;
+        throw;
+    }
 }
 
 bool Interpreter::isTruthy(const std::any& val) {
