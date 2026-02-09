@@ -44,11 +44,11 @@ $(BUILD_DIR)/main.o: main.cpp Scanner.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c main.cpp -o $(BUILD_DIR)/main.o
 
 # Compile Parser.cpp
-$(BUILD_DIR)/Parser.o: Parser.cpp Parser.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+$(BUILD_DIR)/Parser.o: Parser.cpp Parser.h Stmt.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c Parser.cpp -o $(BUILD_DIR)/Parser.o
 
 # Compile parser_test.cpp
-$(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
+$(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Stmt.h Scanner.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c parser_test.cpp -o $(BUILD_DIR)/parser_test.o
 
 # Compile Interpreter.cpp

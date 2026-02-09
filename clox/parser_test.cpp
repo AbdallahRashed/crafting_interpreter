@@ -98,11 +98,16 @@ void testParser(const std::string& source) {
     std::vector<Token> tokens = scanner.scanTokens();
     
     Parser parser(tokens);
-    std::shared_ptr<Expr> expression = parser.parse();
+    auto statements = parser.parse();
     
-    if (expression) {
-        AstPrinter printer;
-        std::cout << "AST: " << printer.print(expression.get()) << std::endl;
+    if (!statements.empty() && statements[0]) {
+        // For expression statements, print the expression
+        if (auto exprStmt = std::dynamic_pointer_cast<Expression>(statements[0])) {
+            AstPrinter printer;
+            std::cout << "AST: " << printer.print(exprStmt->expression.get()) << std::endl;
+        } else {
+            std::cout << "Statement parsed successfully (not an expression statement)" << std::endl;
+        }
     } else {
         std::cout << "Parse failed." << std::endl;
     }
@@ -113,43 +118,43 @@ int main() {
     std::cout << "=== Parser Expression Tests ===" << std::endl << std::endl;
 
     // Test 1: Simple arithmetic
-    testParser("1 + 2 * 3");
+    testParser("1 + 2 * 3;");
 
     // Test 2: Grouping
-    testParser("(1 + 2) * 3");
+    testParser("(1 + 2) * 3;");
 
     // Test 3: Unary
-    testParser("-123");
+    testParser("-123;");
 
     // Test 4: Comparison
-    testParser("5 > 3");
+    testParser("5 > 3;");
 
     // Test 5: Equality
-    testParser("5 == 5");
+    testParser("5 == 5;");
 
     // Test 6: Logical operators
-    testParser("true and false or true");
+    testParser("true and false or true;");
 
     // Test 7: Variable
-    testParser("x + y");
+    testParser("x + y;");
 
     // Test 8: Assignment
-    testParser("x = 10");
+    testParser("x = 10;");
 
     // Test 9: Function call
-    testParser("foo(1, 2, 3)");
+    testParser("foo(1, 2, 3);");
 
     // Test 10: Property access
-    testParser("object.property");
+    testParser("object.property;");
 
     // Test 11: Complex expression
-    testParser("(a + b) * c - d / e");
+    testParser("(a + b) * c - d / e;");
 
     // Test 12: Error case - missing closing paren
-    testParser("(1 + 2");
+    testParser("(1 + 2;");
 
     // Test 13: Error case - unexpected token
-    testParser("1 +");
+    testParser("1 +;");
 
     return 0;
 }

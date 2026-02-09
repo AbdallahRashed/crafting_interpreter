@@ -1,16 +1,294 @@
+/**
+ * Parser.cpp - Implementation of recursive descent parser
+ * 
+ * STATEMENT PARSING FLOW:
+ * ======================
+ * 
+ * 1. parse() - Entry point
+ *    Loops through all tokens, calling declaration() for each top-level construct
+ *    Returns vector of all statements
+ * 
+ * 2. declaration() - Top-level dispatcher
+ *    Recognizes: class, fun, var declarations, or falls through to statement()
+ *    Handles errors with synchronize() to continue parsing
+ * 
+ * 3. statement() - Statement dispatcher  
+ *    Recognizes: for, if, print, return, while, blocks, or expression statements
+ * 
+ * 4. Specific statement parsers
+ *    Each builds and returns appropriate Stmt subclass
+ * 
+ * DESUGARING:
+ * ==========
+ * For-loops are "desugared" (transformed) into while-loops:
+ *   for (init; cond; incr) body
+ * becomes:
+ *   { init; while (cond) { body; incr; } }
+ * 
+ * This simplifies the interpreter - it only needs to handle while-loops.
+ * 
+ * ERROR RECOVERY:
+ * ==============
+ * When a parse error occurs:
+ * 1. Error is reported with line number
+ * 2. ParseError exception is thrown
+ * 3. Caught in declaration() which calls synchronize()
+ * 4. synchronize() skips tokens until statement boundary (semicolon or keyword)
+ * 5. Parsing continues with next statement
+ * 
+ * This allows reporting multiple errors in one parse pass.
+ */
+
 #include "Parser.h"
 #include <iostream>
 
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
-// Main parse method - returns expression AST or nullptr on error
-std::shared_ptr<Expr> Parser::parse() {
+// ==================== MAIN ENTRY POINT ====================
+
+// Main parse method - returns vector of statements
+std::vector<std::shared_ptr<Stmt>> Parser::parse() {
+    std::vector<std::shared_ptr<Stmt>> statements;
+    while (!isAtEnd()) {
+        statements.push_back(declaration());
+    }
+    return statements;
+}
+
+// ==================== DECLARATION PARSING ====================
+
+/**
+ * declaration - Top-level parsing entry point
+ * 
+ * Handles all declarations and statements:
+ * - class declarations
+ * - function declarations  
+ * - variable declarations
+ * - all statement types
+ * 
+ * Error recovery: catches ParseError and synchronizes to continue parsing
+ */
+// declaration -> classDecl | funDecl | varDecl | statement
+std::shared_ptr<Stmt> Parser::declaration() {
     try {
-        return expression();
+        if (match(CLASS)) return classDeclaration();
+        if (match(FUN)) return functionDeclaration("function");
+        if (match(VAR)) return varDeclaration();
+        return statement();
     } catch (const ParseError& error) {
-        // Error already reported, return nullptr
+        synchronize();
         return nullptr;
     }
+}
+
+// varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
+std::shared_ptr<Stmt> Parser::varDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect variable name.");
+    
+    std::shared_ptr<Expr> initializer = nullptr;
+    if (match(EQUAL)) {
+        initializer = expression();
+    }
+    
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return std::make_shared<Var>(name, initializer);
+}
+
+/**
+ * classDeclaration - Parses class with optional superclass and methods
+ * 
+ * Syntax: class Name < Superclass { method1() {} method2() {} }
+ * Superclass is optional. Methods are parsed as function declarations.
+ */
+// classDecl -> "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}"
+std::shared_ptr<Stmt> Parser::classDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect class name.");
+    
+    std::shared_ptr<Variable> superclass = nullptr;
+    if (match(LESS)) {
+        consume(IDENTIFIER, "Expect superclass name.");
+        superclass = std::make_shared<Variable>(previous());
+    }
+    
+    consume(LEFT_BRACE, "Expect '{' before class body.");
+    
+    std::vector<std::shared_ptr<Function>> methods;
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+        methods.push_back(functionDeclaration("method"));
+    }
+    
+    consume(RIGHT_BRACE, "Expect '}' after class body.");
+    return std::make_shared<Class>(name, superclass, methods);
+}
+
+/**
+ * functionDeclaration - Parses function/method with parameters and body
+ * 
+ * Used for both top-level functions and class methods.
+ * kind parameter is "function" or "method" (for error messages)
+ */
+// funDecl -> "fun" function
+// function -> IDENTIFIER "(" parameters? ")" block
+std::shared_ptr<Function> Parser::functionDeclaration(const std::string& kind) {
+    Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+    consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+    
+    std::vector<Token> parameters;
+    if (!check(RIGHT_PAREN)) {
+        do {
+            if (parameters.size() >= 255) {
+                error(peek(), "Can't have more than 255 parameters.");
+            }
+            parameters.push_back(consume(IDENTIFIER, "Expect parameter name."));
+        } while (match(COMMA));
+    }
+    consume(RIGHT_PAREN, "Expect ')' after parameters.");
+    
+    consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    std::vector<std::shared_ptr<Stmt>> body = block();
+    
+    return std::make_shared<Function>(name, parameters, body);
+}
+
+// ==================== STATEMENT PARSING ====================
+
+/**
+ * statement - Dispatches to specific statement parser based on keyword
+ * 
+ * Recognizes control flow and special statements, otherwise falls through
+ * to expression statement (most common case).
+ */
+// statement -> exprStmt | forStmt | ifStmt | printStmt | returnStmt | whileStmt | block
+std::shared_ptr<Stmt> Parser::statement() {
+    if (match(FOR)) return forStatement();
+    if (match(IF)) return ifStatement();
+    if (match(PRINT)) return printStatement();
+    if (match(RETURN)) return returnStatement();
+    if (match(WHILE)) return whileStatement();
+    if (match(LEFT_BRACE)) return std::make_shared<Block>(block());
+    return expressionStatement();
+}
+
+// printStmt -> "print" expression ";"
+std::shared_ptr<Stmt> Parser::printStatement() {
+    std::shared_ptr<Expr> value = expression();
+    consume(SEMICOLON, "Expect ';' after value.");
+    return std::make_shared<Print>(value);
+}
+
+// returnStmt -> "return" expression? ";"
+std::shared_ptr<Stmt> Parser::returnStatement() {
+    Token keyword = previous();
+    std::shared_ptr<Expr> value = nullptr;
+    if (!check(SEMICOLON)) {
+        value = expression();
+    }
+    consume(SEMICOLON, "Expect ';' after return value.");
+    return std::make_shared<Return>(keyword, value);
+}
+
+// exprStmt -> expression ";"
+std::shared_ptr<Stmt> Parser::expressionStatement() {
+    std::shared_ptr<Expr> expr = expression();
+    consume(SEMICOLON, "Expect ';' after expression.");
+    return std::make_shared<Expression>(expr);
+}
+
+// ifStmt -> "if" "(" expression ")" statement ( "else" statement )?
+std::shared_ptr<Stmt> Parser::ifStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'if'.");
+    std::shared_ptr<Expr> condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after if condition.");
+    
+    std::shared_ptr<Stmt> thenBranch = statement();
+    std::shared_ptr<Stmt> elseBranch = nullptr;
+    if (match(ELSE)) {
+        elseBranch = statement();
+    }
+    
+    return std::make_shared<If>(condition, thenBranch, elseBranch);
+}
+
+// whileStmt -> "while" "(" expression ")" statement
+std::shared_ptr<Stmt> Parser::whileStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'while'.");
+    std::shared_ptr<Expr> condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after condition.");
+    std::shared_ptr<Stmt> body = statement();
+    
+    return std::make_shared<While>(condition, body);
+}
+
+/**
+ * forStatement - Parses for-loop and desugars it into a while-loop
+ * 
+ * Desugaring example:
+ *   for (var i = 0; i < 10; i = i + 1) print i;
+ * becomes:
+ *   { var i = 0; while (i < 10) { print i; i = i + 1; } }
+ * 
+ * This simplifies the interpreter by reusing while-loop logic.
+ */
+// forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement
+std::shared_ptr<Stmt> Parser::forStatement() {
+    consume(LEFT_PAREN, "Expect '(' after 'for'.");
+    
+    std::shared_ptr<Stmt> initializer;
+    if (match(SEMICOLON)) {
+        initializer = nullptr;
+    } else if (match(VAR)) {
+        initializer = varDeclaration();
+    } else {
+        initializer = expressionStatement();
+    }
+    
+    std::shared_ptr<Expr> condition = nullptr;
+    if (!check(SEMICOLON)) {
+        condition = expression();
+    }
+    consume(SEMICOLON, "Expect ';' after loop condition.");
+    
+    std::shared_ptr<Expr> increment = nullptr;
+    if (!check(RIGHT_PAREN)) {
+        increment = expression();
+    }
+    consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+    
+    std::shared_ptr<Stmt> body = statement();
+    
+    // Desugar for loop into while loop
+    if (increment != nullptr) {
+        std::vector<std::shared_ptr<Stmt>> bodyStatements;
+        bodyStatements.push_back(body);
+        bodyStatements.push_back(std::make_shared<Expression>(increment));
+        body = std::make_shared<Block>(bodyStatements);
+    }
+    
+    if (condition == nullptr) {
+        condition = std::make_shared<Literal>(true);
+    }
+    body = std::make_shared<While>(condition, body);
+    
+    if (initializer != nullptr) {
+        std::vector<std::shared_ptr<Stmt>> statements;
+        statements.push_back(initializer);
+        statements.push_back(body);
+        body = std::make_shared<Block>(statements);
+    }
+    
+    return body;
+}
+
+// block -> "{" declaration* "}"
+std::vector<std::shared_ptr<Stmt>> Parser::block() {
+    std::vector<std::shared_ptr<Stmt>> statements;
+    
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+        statements.push_back(declaration());
+    }
+    
+    consume(RIGHT_BRACE, "Expect '}' after block.");
+    return statements;
 }
 
 // expression -> assignment
