@@ -57,31 +57,40 @@ private:
     }
 };
 
+// Run statement-based test (source must end with ';')
+void runStmtTest(const std::string& source, const std::string& description) {
+    std::cout << "\n=== " << description << " ===" << std::endl;
+    std::cout << "Source: " << source << std::endl;
+
+    Scanner scanner(source);
+    std::vector<Token> tokens = scanner.scanTokens();
+
+    Parser parser(tokens);
+    std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
+
+    Interpreter interpreter;
+    interpreter.interpret(statements);
+}
+
+// Legacy: expression-only test (no semicolon needed)
 void runTest(const std::string& source, const std::string& description) {
     std::cout << "\n=== " << description << " ===" << std::endl;
     std::cout << "Source: " << source << std::endl;
-    
-    Scanner scanner(source);
+
+    Scanner scanner(source + ";");  // wrap as expression statement
     std::vector<Token> tokens = scanner.scanTokens();
-    
+
     Parser parser(tokens);
-    auto expression = parser.parse();
-    
-    if (expression == nullptr) {
+    std::vector<std::shared_ptr<Stmt>> statements = parser.parse();
+
+    if (statements.empty() || statements[0] == nullptr) {
         std::cout << "Parse error occurred." << std::endl;
         return;
     }
-    
-    // Print the AST structure
-    AstPrinter printer;
-    std::cout << "AST: " << printer.print(expression.get()) << std::endl;
-    
+
+    // Extract the expression from the ExpressionStmt for legacy display
     Interpreter interpreter;
-    std::any result = interpreter.interpret(expression.get());
-    
-    if (result.has_value()) {
-        std::cout << "Result: " << interpreter.stringify(result) << std::endl;
-    }
+    interpreter.interpret(statements);
 }
 
 int main() {
@@ -137,6 +146,12 @@ int main() {
     runTest("!(5 > 3)", "Negation of comparison");
     runTest("(10 + 5) / 3 > 4", "Comparison with arithmetic");
     
+// Statement tests
+    runStmtTest("print 1 + 2;", "Print statement: 1 + 2");
+    runStmtTest("print \"hello\";", "Print string");
+    runStmtTest("print true;", "Print boolean");
+    runStmtTest("1 + 2;", "Expression statement (no output)");
+
     std::cout << "\n=== All tests completed ===" << std::endl;
     
     return 0;

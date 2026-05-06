@@ -1,10 +1,11 @@
 #pragma once
 
 #include "exp.h"
+#include "Stmt.h"
 #include <any>
 #include <string>
 #include <stdexcept>
-
+#include <vector>
 // Custom exception for runtime errors with token info
 class RuntimeError : public std::runtime_error {
 public:
@@ -14,7 +15,7 @@ public:
         : std::runtime_error(message), token(token) {}
 };
 
-class Interpreter : public ExprVisitor {
+class Interpreter : public ExprVisitor, public StmtVisitor {
 public:
     std::any visitLiteralExpr(Literal* expr) override;
     std::any visitGroupingExpr(Grouping* expr) override;
@@ -28,9 +29,12 @@ public:
     std::any visitSuperExpr(Super* expr) override;
     std::any visitThisExpr(This* expr) override;
     std::any visitVariableExpr(Variable* expr) override;
+    std::any visitExpressionStmt(Expression* stmt) override;
+    std::any visitPrintStmt(Print* stmt) override;
 
-    // Public interface to interpret an expression
-    std::any interpret(Expr* expr);
+    // Public interface
+    void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
+    std::any interpret(Expr* expr);  // legacy: expression-only
     std::string stringify(const std::any& value);
 
 private:
@@ -39,4 +43,5 @@ private:
     bool isEqual(const std::any& a, const std::any& b);
     void checkNumberOperand(const Token& op, const std::any& operand);
     void checkNumberOperands(const Token& op, const std::any& left, const std::any& right);
+    void execute(Stmt* stmt);
 };

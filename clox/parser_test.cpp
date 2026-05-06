@@ -98,11 +98,16 @@ void testParser(const std::string& source) {
     std::vector<Token> tokens = scanner.scanTokens();
     
     Parser parser(tokens);
-    std::shared_ptr<Expr> expression = parser.parse();
+    auto statements = parser.parse();
     
-    if (expression) {
+    if (!statements.empty() && statements[0] != nullptr) {
+        // Extract expression from ExpressionStmt for display
         AstPrinter printer;
-        std::cout << "AST: " << printer.print(expression.get()) << std::endl;
+        if (auto exprStmt = dynamic_cast<Expression*>(statements[0].get())) {
+            std::cout << "AST: " << printer.print(exprStmt->expression.get()) << std::endl;
+        } else {
+            std::cout << "Parsed as statement." << std::endl;
+        }
     } else {
         std::cout << "Parse failed." << std::endl;
     }

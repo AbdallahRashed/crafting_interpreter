@@ -4,20 +4,42 @@
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
 // Main parse method - returns expression AST or nullptr on error
-std::shared_ptr<Expr> Parser::parse() {
-    try {
-        return expression();
-    } catch (const ParseError& error) {
-        // Error already reported, return nullptr
-        return nullptr;
-    }
+std::vector<std::shared_ptr<Stmt>> Parser::parse() {
+   std::vector<std::shared_ptr<Stmt>> statements;
+   while(!isAtEnd())
+   {
+    statements.push_back(statement());
+   }
+
+   return statements;
 }
 
 // expression -> assignment
 std::shared_ptr<Expr> Parser::expression() {
     return assignment();
 }
+std::shared_ptr<Stmt> Parser::statement()
+{
+    if(match(PRINT))
+    {
+        return printStatement();
+    }
+    return expressionStatement();
+} 
 
+std::shared_ptr<Stmt> Parser::printStatement()
+{
+    std::shared_ptr<Expr> value=expression();
+    consume(SEMICOLON,"Expect ';' after value.");
+    return std::make_shared<Print>(value);
+}       
+
+std::shared_ptr<Stmt> Parser::expressionStatement()
+{
+    std::shared_ptr<Expr> expr=expression();
+    consume(SEMICOLON,"Expect ';' after expression.");
+    return std::make_shared<Expression>(expr);
+}
 // assignment -> IDENTIFIER "=" assignment | logicalOr
 std::shared_ptr<Expr> Parser::assignment() {
     std::shared_ptr<Expr> expr = logicalOr();

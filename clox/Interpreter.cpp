@@ -6,6 +6,22 @@
 #include <typeinfo>
 #include <iostream>
 
+  std::any Interpreter:: visitExpressionStmt(Expression* stmt)
+  {
+
+   evaluate(stmt->expression.get());
+   return nullptr;
+
+  }
+ std::any Interpreter:: visitPrintStmt(Print* stmt)
+ {
+
+  std::any value=evaluate(stmt->expression.get());
+  std::cout<<stringify(value)<<std::endl;
+  return nullptr;  
+
+ }
+
 std::any Interpreter::visitLiteralExpr(Literal* expr) {
     std::cout << "Evaluating literal: " << stringify(expr->value) << std::endl;
     return expr->value;    
@@ -112,6 +128,16 @@ std::any Interpreter::visitVariableExpr(Variable* expr) {
 }
 
 // Public interface
+
+void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements) {
+    try {
+        for (const auto& statement : statements) {
+            execute(statement.get());
+        }
+    } catch (const RuntimeError& error) {
+        std::cerr << "[line " << error.token.line << "] Runtime error: " << error.what() << std::endl;
+    }
+}
 std::any Interpreter::interpret(Expr* expr) {
     try {
         return evaluate(expr);
@@ -146,6 +172,10 @@ std::string Interpreter::stringify(const std::any& value) {
 // Private helper methods
 std::any Interpreter::evaluate(Expr* expr) {
     return expr->accept(*this); 
+}
+
+void Interpreter::execute(Stmt* stmt) {
+    stmt->accept(*this);
 }
 
 bool Interpreter::isTruthy(const std::any& val) {
