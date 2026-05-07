@@ -6,6 +6,20 @@
 #include <typeinfo>
 #include <iostream>
 
+
+std::any Interpreter::visitVarStmt(Var* stmt) {
+
+  std::any value=nullptr;
+    if(stmt->initializer!=nullptr)
+    {
+        value=evaluate(stmt->initializer.get());
+    }
+    environment->define(stmt->name.lexeme,value);
+    return std::any();  
+};
+
+
+
   std::any Interpreter:: visitExpressionStmt(Expression* stmt)
   {
 
@@ -124,7 +138,7 @@ std::any Interpreter::visitThisExpr(This* expr) {
 }
 
 std::any Interpreter::visitVariableExpr(Variable* expr) {
-    throw std::runtime_error("Variable not yet implemented.");
+    return environment->get(expr->name);
 }
 
 // Public interface

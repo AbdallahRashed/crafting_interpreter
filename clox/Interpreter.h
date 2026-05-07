@@ -6,6 +6,8 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include "Env.h"
+#include "Token.h"
 // Custom exception for runtime errors with token info
 class RuntimeError : public std::runtime_error {
 public:
@@ -31,7 +33,7 @@ public:
     std::any visitVariableExpr(Variable* expr) override;
     std::any visitExpressionStmt(Expression* stmt) override;
     std::any visitPrintStmt(Print* stmt) override;
-
+    std::any visitVarStmt(Var* stmt) override;
     // Public interface
     void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
     std::any interpret(Expr* expr);  // legacy: expression-only
@@ -44,4 +46,8 @@ private:
     void checkNumberOperand(const Token& op, const std::any& operand);
     void checkNumberOperands(const Token& op, const std::any& left, const std::any& right);
     void execute(Stmt* stmt);
+    void executeBlock(const std::vector<std::shared_ptr<Stmt>>& statements, std::shared_ptr<Environment> env);
+
+    std::shared_ptr<Environment> environment = std::make_shared<Environment>();
+
 };

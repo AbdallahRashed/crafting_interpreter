@@ -152,6 +152,13 @@ int main() {
     runStmtTest("print true;", "Print boolean");
     runStmtTest("1 + 2;", "Expression statement (no output)");
 
+    // Variable tests
+    runStmtTest("var x = 10; print x;", "Declare and print variable");
+    runStmtTest("var a = 1; var b = 2; print a + b;", "Two variables");
+    runStmtTest("var x = 5; print x * 2;", "Variable in expression");
+    runStmtTest("var name = \"Lox\"; print name;", "String variable");
+    runStmtTest("var x; print x;", "Uninitialized variable (nil)");
+
     std::cout << "\n=== All tests completed ===" << std::endl;
     
     return 0;

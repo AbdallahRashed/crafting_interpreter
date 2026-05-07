@@ -8,11 +8,13 @@ std::vector<std::shared_ptr<Stmt>> Parser::parse() {
    std::vector<std::shared_ptr<Stmt>> statements;
    while(!isAtEnd())
    {
-    statements.push_back(statement());
+    statements.push_back(declaration());
    }
 
    return statements;
 }
+
+
 
 // expression -> assignment
 std::shared_ptr<Expr> Parser::expression() {
@@ -39,6 +41,30 @@ std::shared_ptr<Stmt> Parser::expressionStatement()
     std::shared_ptr<Expr> expr=expression();
     consume(SEMICOLON,"Expect ';' after expression.");
     return std::make_shared<Expression>(expr);
+}
+
+std::shared_ptr<Stmt> Parser::declaration() {
+    try {
+        if (match(VAR)) return varDeclaration();
+        return statement();
+    } catch (const ParseError& error) {
+        synchronize();
+        return nullptr;
+    }
+}
+
+std::shared_ptr<Stmt>Parser::varDeclaration()
+{
+
+  Token name = consume(IDENTIFIER, "Expect variable name.");
+    std::shared_ptr<Expr> initializer = nullptr;
+    if(match(EQUAL))
+    {
+     initializer=expression();   
+    }
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return std::make_shared<Var>(name, initializer);   
+
 }
 // assignment -> IDENTIFIER "=" assignment | logicalOr
 std::shared_ptr<Expr> Parser::assignment() {

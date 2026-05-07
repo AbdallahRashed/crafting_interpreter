@@ -24,7 +24,8 @@ private:
     // Specific statement parsers
     std::shared_ptr<Stmt> printStatement();        // print expr;
     std::shared_ptr<Stmt> expressionStatement();   // expr;
-    
+     std::shared_ptr<Stmt> declaration();
+      std::shared_ptr<Stmt> varDeclaration();     
     // Expression parsing methods (precedence climbing)
     std::shared_ptr<Expr> expression();
     std::shared_ptr<Expr> assignment();
