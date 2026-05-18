@@ -26,6 +26,7 @@ void runProgram(const std::string& source, const std::string& description) {
     auto statements = parser.parse();
     
     Interpreter interpreter;
+    interpreter.interpret();           // register native functions (clock, etc.)
     interpreter.interpret(statements);
 }
 
@@ -155,6 +156,81 @@ print undefinedVar;
     runProgram(R"(
 undefinedVar = 10;
 )", "ERROR: Assign to undefined variable");
+
+    // ==================== FUNCTION TESTS ====================
+
+    // Test 16: Simple function declaration and call
+    runProgram(R"(
+fun sayHi() {
+    print "hi";
+}
+sayHi();
+)", "Simple function call");
+
+    // Test 17: Function with parameters
+    runProgram(R"(
+fun add(a, b) {
+    print a + b;
+}
+add(3, 4);
+)", "Function with parameters");
+
+    // Test 18: Function called multiple times
+    runProgram(R"(
+fun greet(name) {
+    print "Hello, " + name + "!";
+}
+greet("Alice");
+greet("Bob");
+)", "Function called multiple times");
+
+    // Test 19: Recursive function (countdown)
+    runProgram(R"(
+fun countdown(n) {
+    if (n <= 0) {
+        print "done";
+    } else {
+        print n;
+        countdown(n - 1);
+    }
+}
+countdown(3);
+)", "Recursive function");
+
+    // Test 20: Native clock function
+    runProgram(R"(
+var t = clock();
+print t > 0;
+)", "Native clock() returns positive number");
+
+    // Test 21: Function with return value
+    runProgram(R"(
+fun add(a, b) {
+    return a + b;
+}
+print add(3, 4);
+)", "Function return value");
+
+    // Test 22: Early return
+    runProgram(R"(
+fun sign(n) {
+    if (n < 0) return "negative";
+    if (n > 0) return "positive";
+    return "zero";
+}
+print sign(-5);
+print sign(0);
+print sign(3);
+)", "Early return from function");
+
+    // Test 23: Recursive with return
+    runProgram(R"(
+fun fib(n) {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+print fib(7);
+)", "Recursive fibonacci with return");
 
     std::cout << "\n=== All tests completed ===" << std::endl;
     return 0;

@@ -87,7 +87,22 @@ std::any Interpreter::visitAssignExpr(Assign* expr) {
 }
 
 std::any Interpreter::visitCallExpr(Call* expr) {
-    throw std::runtime_error("Call not yet implemented.");
+    std::any callee = evaluate(expr->callee.get());
+    std::vector<std::any> arguments;
+    for (const auto& arg : expr->arguments) {
+        arguments.push_back(evaluate(arg.get()));
+    }
+
+    if (callee.type() != typeid(std::shared_ptr<LoxCallable>)) {
+        throw RuntimeError(expr->paren, "Can only call functions and classes.");
+    }
+    std::shared_ptr<LoxCallable> function = std::any_cast<std::shared_ptr<LoxCallable>>(callee);
+
+    if (static_cast<int>(arguments.size()) != function->arity()) {
+        throw RuntimeError(expr->paren, "Expected " + std::to_string(function->arity()) +
+                          " arguments but got " + std::to_string(arguments.size()) + ".");
+    }
+    return function->call(*this, arguments);
 }
 
 std::any Interpreter::visitGetExpr(Get* expr) {
@@ -169,11 +184,30 @@ std::any Interpreter::visitWhileStmt(While* stmt) {
 }
 
 std::any Interpreter::visitFunctionStmt(Function* stmt) {
-    throw std::runtime_error("Function not yet implemented.");
+    std::shared_ptr<LoxCallable> function = std::make_shared<LoxFunction>(stmt);
+    environment->define(stmt->name.lexeme, function);
+    return std::any();
+}
+
+std::any LoxFunction::call(Interpreter& interpreter, const std::vector<std::any>& arguments) {
+    std::shared_ptr<Environment> env = std::make_shared<Environment>(interpreter.globals);
+    for (size_t i = 0; i < declaration->params.size(); ++i) {
+        env->define(declaration->params[i].lexeme, arguments[i]);
+    }
+    try {
+        interpreter.executeBlock(declaration->body, env);
+    } catch (const ReturnException& ret) {
+        return ret.value;
+    }
+    return std::any();  // implicit nil return
 }
 
 std::any Interpreter::visitReturnStmt(Return* stmt) {
-    throw std::runtime_error("Return not yet implemented.");
+    std::any value;
+    if (stmt->value != nullptr) {
+        value = evaluate(stmt->value.get());
+    }
+    throw ReturnException(value);
 }
 
 std::any Interpreter::visitClassStmt(Class* stmt) {
@@ -183,6 +217,9 @@ std::any Interpreter::visitClassStmt(Class* stmt) {
 // ==================== PUBLIC INTERFACE ====================
 
 // NEW: Interpret a list of statements (main entry point)
+void Interpreter::interpret() {
+    globals->define("clock", std::shared_ptr<LoxCallable>(std::make_shared<ClockCallable>()));
+}
 void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements) {
     try {
         for (const auto& statement : statements) {
@@ -190,6 +227,8 @@ void Interpreter::interpret(const std::vector<std::shared_ptr<Stmt>>& statements
         }
     } catch (const RuntimeError& error) {
         std::cerr << "[line " << error.token.line << "] Runtime error: " << error.what() << std::endl;
+    } catch (const std::runtime_error& error) {
+        std::cerr << "Runtime error: " << error.what() << std::endl;
     }
 }
 

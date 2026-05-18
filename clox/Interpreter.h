@@ -3,10 +3,17 @@
 #include "exp.h"
 #include "Stmt.h"
 #include "Environment.h"
+#include "LoxCallable.h"
 #include <any>
 #include <string>
 #include <stdexcept>
 #include <memory>
+
+// Used to unwind the call stack when a return statement is executed
+struct ReturnException {
+    std::any value;
+    ReturnException(std::any value) : value(std::move(value)) {}
+};
 
 // Custom exception for runtime errors with token info
 class RuntimeError : public std::runtime_error {
@@ -18,6 +25,7 @@ public:
 };
 
 class Interpreter : public ExprVisitor, public StmtVisitor {
+    friend class LoxFunction;
 public:
     // Expression visitors
     std::any visitLiteralExpr(Literal* expr) override;
@@ -45,13 +53,15 @@ public:
     std::any visitClassStmt(Class* stmt) override;
             
     // Public interface
+    void interpret();
     void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);  // NEW: interpret statements
     std::any interpret(Expr* expr);  // LEGACY: interpret single expression (for tests)
     std::string stringify(const std::any& value);  // Convert value to string for output
 
 private:
     // Environment for variable storage (starts as global scope)
-    std::shared_ptr<Environment> environment = std::make_shared<Environment>();
+    std::shared_ptr<Environment> globals = std::make_shared<Environment>();
+    std::shared_ptr<Environment> environment = globals;
     
     // Expression evaluation
     std::any evaluate(Expr* expr);
