@@ -231,7 +231,55 @@ fun fib(n) {
 }
 print fib(7);
 )", "Recursive fibonacci with return");
+    // ==================== CLOSURE TESTS ====================
 
+    // Test 24: Counter closure — inner function captures outer variable
+    runProgram(R"(
+fun makeCounter() {
+    var count = 0;
+    fun increment() {
+        count = count + 1;
+        return count;
+    }
+    return increment;
+}
+var counter = makeCounter();
+print counter();
+print counter();
+print counter();
+)", "Counter closure (should print 1, 2, 3)");
+
+    // Test 25: Two independent closures don't share state
+    runProgram(R"(
+fun makeCounter() {
+    var count = 0;
+    fun increment() {
+        count = count + 1;
+        return count;
+    }
+    return increment;
+}
+var c1 = makeCounter();
+var c2 = makeCounter();
+print c1();
+print c1();
+print c2();
+print c1();
+)", "Independent closures (c1:1,2 c2:1 c1:3)");
+
+    // Test 26: Closure captures variable by reference (shared state)
+    runProgram(R"(
+fun makeAdder(x) {
+    fun add(y) {
+        return x + y;
+    }
+    return add;
+}
+var add5 = makeAdder(5);
+var add10 = makeAdder(10);
+print add5(3);
+print add10(3);
+)", "Adder closure (should print 8, 13)");
     std::cout << "\n=== All tests completed ===" << std::endl;
     return 0;
 }

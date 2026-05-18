@@ -184,13 +184,16 @@ std::any Interpreter::visitWhileStmt(While* stmt) {
 }
 
 std::any Interpreter::visitFunctionStmt(Function* stmt) {
-    std::shared_ptr<LoxCallable> function = std::make_shared<LoxFunction>(stmt);
+    // Capture current environment as closure at the moment of function definition
+    std::shared_ptr<LoxCallable> function = std::make_shared<LoxFunction>(stmt, environment);
     environment->define(stmt->name.lexeme, function);
     return std::any();
 }
 
 std::any LoxFunction::call(Interpreter& interpreter, const std::vector<std::any>& arguments) {
-    std::shared_ptr<Environment> env = std::make_shared<Environment>(interpreter.globals);
+    // Parent of the call frame is the closure, not globals —
+    // this lets the function see variables from the scope where it was defined
+    std::shared_ptr<Environment> env = std::make_shared<Environment>(closure);
     for (size_t i = 0; i < declaration->params.size(); ++i) {
         env->define(declaration->params[i].lexeme, arguments[i]);
     }
