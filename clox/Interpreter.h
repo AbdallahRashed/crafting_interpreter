@@ -8,6 +8,7 @@
 #include <string>
 #include <stdexcept>
 #include <memory>
+#include <unordered_map>
 
 // Used to unwind the call stack when a return statement is executed
 struct ReturnException {
@@ -54,14 +55,16 @@ public:
             
     // Public interface
     void interpret();
-    void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);  // NEW: interpret statements
-    std::any interpret(Expr* expr);  // LEGACY: interpret single expression (for tests)
-    std::string stringify(const std::any& value);  // Convert value to string for output
+    void interpret(const std::vector<std::shared_ptr<Stmt>>& statements);
+    std::any interpret(Expr* expr);
+    std::string stringify(const std::any& value);
+    void resolve(Expr* expr, int depth);  // called by Resolver to store variable depths
 
 private:
-    // Environment for variable storage (starts as global scope)
     std::shared_ptr<Environment> globals = std::make_shared<Environment>();
     std::shared_ptr<Environment> environment = globals;
+    // Maps each variable-use expression to its resolved scope depth
+    std::unordered_map<Expr*, int> locals;
     
     // Expression evaluation
     std::any evaluate(Expr* expr);
@@ -76,4 +79,5 @@ private:
     bool isEqual(const std::any& a, const std::any& b);
     void checkNumberOperand(const Token& op, const std::any& operand);
     void checkNumberOperands(const Token& op, const std::any& left, const std::any& right);
+    std::any lookUpVariable(const Token& name, Expr* expr);
 };

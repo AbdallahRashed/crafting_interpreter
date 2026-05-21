@@ -82,7 +82,12 @@ std::any Interpreter::visitBinaryExpr(Binary* expr) {
 
 std::any Interpreter::visitAssignExpr(Assign* expr) {
     std::any value = evaluate(expr->value.get());
-    environment->assign(expr->name, value);
+    auto it = locals.find(expr);
+    if (it != locals.end()) {
+        environment->assignAt(it->second, expr->name, value);
+    } else {
+        globals->assign(expr->name, value);
+    }
     return value;
 }
 
@@ -135,7 +140,19 @@ std::any Interpreter::visitThisExpr(This* expr) {
 }
 
 std::any Interpreter::visitVariableExpr(Variable* expr) {
-    return environment->get(expr->name);
+    return lookUpVariable(expr->name, expr);
+}
+
+void Interpreter::resolve(Expr* expr, int depth) {
+    locals[expr] = depth;
+}
+
+std::any Interpreter::lookUpVariable(const Token& name, Expr* expr) {
+    auto it = locals.find(expr);
+    if (it != locals.end()) {
+        return environment->getAt(it->second, name.lexeme);
+    }
+    return globals->get(name);  // not in locals map → global
 }
 
 // ==================== STATEMENT VISITORS ====================

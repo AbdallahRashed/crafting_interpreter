@@ -94,4 +94,22 @@ public:
         // Not found in any scope
         throw std::runtime_error("Undefined variable '" + name.lexeme + "'.");
     }
+
+    // Get variable exactly 'depth' scopes up — used by resolver-aware interpreter
+    std::any getAt(int depth, const std::string& name) {
+        return ancestor(depth)->values[name];
+    }
+
+    // Assign variable exactly 'depth' scopes up
+    void assignAt(int depth, const Token& name, std::any value) {
+        ancestor(depth)->values[name.lexeme] = value;
+    }
+
+private:
+    // Walk exactly 'depth' steps up the enclosing chain
+    Environment* ancestor(int depth) {
+        Environment* env = this;
+        for (int i = 0; i < depth; ++i) env = env->enclosing.get();
+        return env;
+    }
 };

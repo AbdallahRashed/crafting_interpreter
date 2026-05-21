@@ -12,6 +12,7 @@
 #include "Scanner.h"
 #include "Parser.h"
 #include "Interpreter.h"
+#include "Resolver.h"
 #include <iostream>
 
 void runProgram(const std::string& source, const std::string& description) {
@@ -27,6 +28,10 @@ void runProgram(const std::string& source, const std::string& description) {
     
     Interpreter interpreter;
     interpreter.interpret();           // register native functions (clock, etc.)
+
+    Resolver resolver(interpreter);
+    resolver.resolve(statements);      // resolve variable depths before interpreting
+
     interpreter.interpret(statements);
 }
 
