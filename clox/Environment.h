@@ -26,12 +26,13 @@
 class RuntimeError;
 
 class Environment {
+public:
+    // Parent scope (nullptr for global scope)
+    std::shared_ptr<Environment> enclosing;
+
 private:
     // Variable storage: name → value
     std::unordered_map<std::string, std::any> values;
-    
-    // Parent scope (nullptr for global scope)
-    std::shared_ptr<Environment> enclosing;
 
 public:
     /**

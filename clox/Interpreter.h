@@ -27,6 +27,7 @@ public:
 
 class Interpreter : public ExprVisitor, public StmtVisitor {
     friend class LoxFunction;
+    friend class LoxClass;
 public:
     // Expression visitors
     std::any visitLiteralExpr(Literal* expr) override;

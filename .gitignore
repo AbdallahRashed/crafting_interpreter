@@ -6,7 +6,8 @@
 a.out
 
 # Executables
-clox
+/clox
+!clox/
 jlox
 
 # Build directories
@@ -24,3 +25,7 @@ out/
 # OS files
 .DS_Store
 Thumbs.db
+clox/scanner
+clox/scanner_table
+clox/scanner_test
+*.old

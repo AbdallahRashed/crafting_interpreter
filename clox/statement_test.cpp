@@ -285,6 +285,149 @@ var add10 = makeAdder(10);
 print add5(3);
 print add10(3);
 )", "Adder closure (should print 8, 13)");
+
+    // ============== CLASS TESTS ==============
+
+    // Test: Basic class and instance
+    runProgram(R"(
+class Foo {}
+var foo = Foo();
+print foo;
+)", "Basic class instantiation (should print 'Foo instance')");
+
+    // Test: Fields on instances
+    runProgram(R"(
+class Point {}
+var p = Point();
+p.x = 10;
+p.y = 20;
+print p.x;
+print p.y;
+)", "Instance fields (should print 10, 20)");
+
+    // Test: Methods
+    runProgram(R"(
+class Greeter {
+    greet() {
+        print "Hello!";
+    }
+}
+var g = Greeter();
+g.greet();
+)", "Class methods (should print 'Hello!')");
+
+    // Test: this in methods
+    runProgram(R"(
+class Person {
+    sayName() {
+        print this.name;
+    }
+}
+var p = Person();
+p.name = "Alice";
+p.sayName();
+)", "This binding (should print 'Alice')");
+
+    // Test: Constructor (init)
+    runProgram(R"(
+class Circle {
+    init(radius) {
+        this.radius = radius;
+    }
+    area() {
+        return 3.14159 * this.radius * this.radius;
+    }
+}
+var c = Circle(5);
+print c.radius;
+print c.area();
+)", "Constructor and methods (should print 5, 78.53975)");
+
+    // Test: Inheritance
+    runProgram(R"(
+class Animal {
+    speak() {
+        print "...";
+    }
+}
+class Dog < Animal {
+    speak() {
+        print "Woof!";
+    }
+}
+class Cat < Animal {}
+var d = Dog();
+d.speak();
+var c = Cat();
+c.speak();
+)", "Inheritance (should print 'Woof!', '...')");
+
+    // Test: super
+    runProgram(R"(
+class Base {
+    greet() {
+        print "Hello from Base";
+    }
+}
+class Derived < Base {
+    greet() {
+        super.greet();
+        print "Hello from Derived";
+    }
+}
+var d = Derived();
+d.greet();
+)", "Super calls (should print 'Hello from Base', 'Hello from Derived')");
+
+    // Test: init returns instance
+    runProgram(R"(
+class Foo {
+    init() {
+        this.x = 42;
+    }
+}
+var f = Foo();
+print f.x;
+)", "Init returns instance with field (should print 42)");
+
+    // Test: Inheritance with constructors
+    runProgram(R"(
+class Shape {
+    init(color) {
+        this.color = color;
+    }
+}
+class Square < Shape {
+    init(color, size) {
+        super.init(color);
+        this.size = size;
+    }
+    area() {
+        return this.size * this.size;
+    }
+}
+var sq = Square("red", 4);
+print sq.color;
+print sq.size;
+print sq.area();
+)", "Inheritance with super.init (should print 'red', 4, 16)");
+
+    // Test: Methods from superclass can access subclass fields
+    runProgram(R"(
+class Base {
+    describe() {
+        print this.name;
+    }
+}
+class Child < Base {
+    init(name) {
+        this.name = name;
+    }
+}
+var c = Child("test");
+c.describe();
+)", "Inherited method accessing subclass field (should print 'test')");
+
     std::cout << "\n=== All tests completed ===" << std::endl;
     return 0;
 }

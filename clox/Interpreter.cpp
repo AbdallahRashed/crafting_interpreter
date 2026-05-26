@@ -1,4 +1,5 @@
 #include "Interpreter.h"
+#include "LoxClass.h"
 #include "TokenType.h"
 #include <any>
 #include <string>
@@ -111,7 +112,12 @@ std::any Interpreter::visitCallExpr(Call* expr) {
 }
 
 std::any Interpreter::visitGetExpr(Get* expr) {
-    throw std::runtime_error("Get not yet implemented.");
+    std::any object = evaluate(expr->object.get());
+    if (object.type() == typeid(std::shared_ptr<LoxInstance>)) {
+        auto instance = std::any_cast<std::shared_ptr<LoxInstance>>(object);
+        return instance->get(expr->name);
+    }
+    throw RuntimeError(expr->name, "Only instances have properties.");
 }
 
 std::any Interpreter::visitLogicalExpr(Logical* expr) {
@@ -128,15 +134,33 @@ std::any Interpreter::visitLogicalExpr(Logical* expr) {
 }
 
 std::any Interpreter::visitSetExpr(Set* expr) {
-    throw std::runtime_error("Set not yet implemented.");
+    std::any object = evaluate(expr->object.get());
+    if (object.type() != typeid(std::shared_ptr<LoxInstance>)) {
+        throw RuntimeError(expr->name, "Only instances have fields.");
+    }
+    std::any value = evaluate(expr->value.get());
+    auto instance = std::any_cast<std::shared_ptr<LoxInstance>>(object);
+    instance->set(expr->name, value);
+    return value;
 }
 
 std::any Interpreter::visitSuperExpr(Super* expr) {
-    throw std::runtime_error("Super not yet implemented.");
+    int distance = locals[expr];
+    auto superclass = std::any_cast<std::shared_ptr<LoxClass>>(
+        environment->getAt(distance, "super"));
+    // "this" is always one level nearer than "super"
+    auto instance = std::any_cast<std::shared_ptr<LoxInstance>>(
+        environment->getAt(distance - 1, "this"));
+    auto method = superclass->findMethod(expr->method.lexeme);
+    if (method == nullptr) {
+        throw RuntimeError(expr->method,
+            "Undefined property '" + expr->method.lexeme + "'.");
+    }
+    return std::shared_ptr<LoxCallable>(method->bind(instance));
 }
 
 std::any Interpreter::visitThisExpr(This* expr) {
-    throw std::runtime_error("This not yet implemented.");
+    return lookUpVariable(expr->keyword, expr);
 }
 
 std::any Interpreter::visitVariableExpr(Variable* expr) {
@@ -231,7 +255,42 @@ std::any Interpreter::visitReturnStmt(Return* stmt) {
 }
 
 std::any Interpreter::visitClassStmt(Class* stmt) {
-    throw std::runtime_error("Class not yet implemented.");
+    std::any superclassVal;
+    std::shared_ptr<LoxClass> superclass = nullptr;
+
+    if (stmt->superclass != nullptr) {
+        superclassVal = evaluate(stmt->superclass.get());
+        if (superclassVal.type() != typeid(std::shared_ptr<LoxCallable>)) {
+            throw RuntimeError(stmt->superclass->name, "Superclass must be a class.");
+        }
+        superclass = std::dynamic_pointer_cast<LoxClass>(
+            std::any_cast<std::shared_ptr<LoxCallable>>(superclassVal));
+        if (superclass == nullptr) {
+            throw RuntimeError(stmt->superclass->name, "Superclass must be a class.");
+        }
+    }
+
+    environment->define(stmt->name.lexeme, std::any());
+
+    if (stmt->superclass != nullptr) {
+        environment = std::make_shared<Environment>(environment);
+        environment->define("super", superclass);
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<LoxFunction>> methods;
+    for (const auto& method : stmt->methods) {
+        auto function = std::make_shared<LoxFunction>(method.get(), environment);
+        methods[method->name.lexeme] = function;
+    }
+
+    auto klass = std::make_shared<LoxClass>(stmt->name.lexeme, superclass, methods);
+
+    if (superclass != nullptr) {
+        environment = environment->enclosing;
+    }
+
+    environment->assign(stmt->name, std::shared_ptr<LoxCallable>(klass));
+    return std::any();
 }
 
 // ==================== PUBLIC INTERFACE ====================
@@ -279,6 +338,14 @@ std::string Interpreter::stringify(const std::any& value) {
     
     if (value.type() == typeid(std::string)) {
         return std::any_cast<std::string>(value);
+    }
+
+    if (value.type() == typeid(std::shared_ptr<LoxCallable>)) {
+        return std::any_cast<std::shared_ptr<LoxCallable>>(value)->toString();
+    }
+
+    if (value.type() == typeid(std::shared_ptr<LoxInstance>)) {
+        return std::any_cast<std::shared_ptr<LoxInstance>>(value)->toString();
     }
     
     return "unknown";

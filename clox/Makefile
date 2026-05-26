@@ -7,8 +7,8 @@ BUILD_DIR = build
 # Object files
 SCANNER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/main.o
 PARSER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/parser_test.o
-INTERPRETER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/interpreter_test.o
-STATEMENT_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/Resolver.o $(BUILD_DIR)/statement_test.o
+INTERPRETER_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/LoxClass.o $(BUILD_DIR)/interpreter_test.o
+STATEMENT_OBJS = $(BUILD_DIR)/TokenType.o $(BUILD_DIR)/Scanner.o $(BUILD_DIR)/Parser.o $(BUILD_DIR)/Interpreter.o $(BUILD_DIR)/LoxClass.o $(BUILD_DIR)/Resolver.o $(BUILD_DIR)/statement_test.o
 
 # Target executables
 SCANNER_TARGET = $(BUILD_DIR)/scanner_test
@@ -59,6 +59,10 @@ $(BUILD_DIR)/parser_test.o: parser_test.cpp Parser.h Stmt.h Scanner.h exp.h Toke
 # Compile Interpreter.cpp
 $(BUILD_DIR)/Interpreter.o: Interpreter.cpp Interpreter.h Environment.h Stmt.h exp.h Token.h TokenType.h | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c Interpreter.cpp -o $(BUILD_DIR)/Interpreter.o
+
+# Compile LoxClass.cpp
+$(BUILD_DIR)/LoxClass.o: LoxClass.cpp LoxClass.h LoxCallable.h Interpreter.h Environment.h Stmt.h exp.h Token.h | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c LoxClass.cpp -o $(BUILD_DIR)/LoxClass.o
 
 # Compile Resolver.cpp
 $(BUILD_DIR)/Resolver.o: Resolver.cpp Resolver.h Interpreter.h Environment.h Stmt.h exp.h Token.h | $(BUILD_DIR)
