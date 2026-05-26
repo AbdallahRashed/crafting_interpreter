@@ -1,0 +1,143 @@
+// Test: Basic arithmetic and variables
+print 1 + 2;          // expect: 3
+print 10 - 3;         // expect: 7
+print 2 * 4;          // expect: 8
+print 15 / 3;         // expect: 5
+
+// Test: Strings
+print "hello" + " " + "world"; // expect: hello world
+
+// Test: Booleans and comparison
+print true;           // expect: true
+print !false;         // expect: true
+print 3 > 2;          // expect: true
+print 1 == 1;         // expect: true
+print 1 != 2;         // expect: true
+
+// Test: Variables and assignment
+var x = 10;
+print x;              // expect: 10
+x = 20;
+print x;              // expect: 20
+
+// Test: Block scoping
+{
+    var y = 42;
+    print y;          // expect: 42
+}
+
+// Test: If/else
+if (true) {
+    print "yes";      // expect: yes
+}
+if (false) {
+    print "no";
+} else {
+    print "else";     // expect: else
+}
+
+// Test: While loop
+var i = 0;
+while (i < 3) {
+    print i;          // expect: 0, 1, 2
+    i = i + 1;
+}
+
+// Test: For loop
+for (var j = 10; j < 13; j = j + 1) {
+    print j;          // expect: 10, 11, 12
+}
+
+// Test: Functions
+fun add(a, b) {
+    return a + b;
+}
+print add(3, 4);      // expect: 7
+
+fun greet(name) {
+    print "Hello, " + name + "!";
+}
+greet("Lox");         // expect: Hello, Lox!
+
+// Test: Recursion
+fun fib(n) {
+    if (n <= 1) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+print fib(10);        // expect: 55
+
+// Test: Closures
+fun makeCounter() {
+    var count = 0;
+    fun increment() {
+        count = count + 1;
+        return count;
+    }
+    return increment;
+}
+var counter = makeCounter();
+print counter();      // expect: 1
+print counter();      // expect: 2
+print counter();      // expect: 3
+
+// Test: Classes
+class Animal {
+    speak() {
+        print "...";
+    }
+}
+
+class Dog < Animal {
+    speak() {
+        print "Woof!";
+    }
+}
+
+class Cat < Animal {}
+
+var dog = Dog();
+dog.speak();          // expect: Woof!
+var cat = Cat();
+cat.speak();          // expect: ...
+
+// Test: Constructor and this
+class Circle {
+    init(radius) {
+        this.radius = radius;
+    }
+    area() {
+        return 3.14159 * this.radius * this.radius;
+    }
+}
+
+var c = Circle(5);
+print c.radius;       // expect: 5
+print c.area();       // expect: 78.53975
+
+// Test: Inheritance with super
+class Base {
+    greet() {
+        print "Hello from Base";
+    }
+}
+
+class Derived < Base {
+    greet() {
+        super.greet();
+        print "Hello from Derived";
+    }
+}
+
+var d = Derived();
+d.greet();
+// expect: Hello from Base
+// expect: Hello from Derived
+
+// Test: Fields
+class Point {}
+var p = Point();
+p.x = 10;
+p.y = 20;
+print p.x + p.y;     // expect: 30
+
+print "All tests passed!";
